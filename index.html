@@ -1,84 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Soft Glow Orb Pomodoro</title>
-  <style>
-    body {
-      background: #EBECED;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      overflow: hidden;
-      font-family: "Inter", "Noto Sans", sans-serif;
-      color: #333;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soft Glow Orb Pomodoro</title>
+<style>
+  body {
+    background: #EBECED;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: "Inter", sans-serif;
+  }
 
-    .container {
-      text-align: center;
-      position: relative;
-    }
+  .container {
+    text-align: center;
+    position: relative;
+  }
 
-    .orb {
-      width: 150px;
-      height: 150px;
-      background: rgba(0, 0, 0, 0.8);
-      border-radius: 50%;
-      box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
-      animation: breathe 6s ease-in-out infinite;
-      transition: background 1.5s ease, transform 1.5s ease;
-    }
+  .orb {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff9c4 40%, #c8e6c9 100%);
+    box-shadow: 0 0 30px #fff9c4;
+    transition: width 0.3s ease, height 0.3s ease, box-shadow 0.3s ease;
+    margin: 0 auto;
+  }
 
-    .text {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 1.1rem;
-      pointer-events: none;
-      opacity: 0.8;
-    }
+  .time-label {
+    margin-top: 12px;
+    font-size: 1rem;
+    color: #333;
+  }
 
-    .controls {
-      margin-top: 20px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
+  .controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
 
-    button {
-      background: rgba(0, 0, 0, 0.8);
-      border: none;
-      border-radius: 50px;
-      color: #fff;
-      padding: 8px 14px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: background 0.3s ease;
-    }
+  button {
+    background: #222;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
 
-    button:hover {
-      background: rgba(0, 0, 0, 0.6);
-    }
+  button:hover {
+    background: #444;
+  }
 
-    @keyframes breathe {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(0,0,0,0.15); }
-      50% { transform: scale(1.05); box-shadow: 0 0 60px rgba(0,0,0,0.25); }
-    }
-
-    @keyframes expand {
-      from { transform: scale(1); }
-      to { transform: scale(2.2); }
-    }
-  </style>
+  @keyframes glow {
+    0% { box-shadow: 0 0 10px #fff9c4; }
+    50% { box-shadow: 0 0 50px #fff9c4; }
+    100% { box-shadow: 0 0 10px #fff9c4; }
+  }
+</style>
 </head>
 <body>
   <div class="container">
     <div class="orb" id="orb"></div>
-    <div class="text" id="text">Focus • 25:00</div>
+    <div class="time-label" id="timeLabel">Focus • 25:00</div>
     <div class="controls">
       <button onclick="startFocus()">Focus</button>
       <button onclick="startBreak()">Break</button>
@@ -86,78 +75,81 @@
     </div>
   </div>
 
-  <script>
-    let focusDuration = 25 * 60; // 25 min
-    let breakDuration = 5 * 60;  // 5 min
-    let timer;
-    let remainingTime = focusDuration;
-    let mode = "focus";
-    const orb = document.getElementById("orb");
-    const text = document.getElementById("text");
+<script>
+let focusDuration = 25 * 60; // 25 min
+let breakDuration = 5 * 60;  // 5 min
+let timer;
+let remainingTime = focusDuration;
+let mode = "focus";
+const orb = document.getElementById("orb");
+const timeLabel = document.getElementById("timeLabel");
 
-    function updateDisplay() {
-      const mins = Math.floor(remainingTime / 60);
-      const secs = remainingTime % 60;
-      text.textContent = `${mode === "focus" ? "Focus" : "Break"} • ${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-    }
+function updateDisplay() {
+  const mins = Math.floor(remainingTime / 60);
+  const secs = remainingTime % 60;
+  timeLabel.textContent = `${mode === "focus" ? "Focus" : "Break"} • ${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
+}
 
-    function startFocus() {
-      clearInterval(timer);
-      mode = "focus";
-      remainingTime = focusDuration;
-      orb.style.background = "rgba(0,0,0,0.8)";
-      orb.style.boxShadow = "0 0 40px rgba(0,0,0,0.2)";
-      animateOrb(25 * 60);
-      timer = setInterval(runTimer, 1000);
-    }
+function startFocus() {
+  clearInterval(timer);
+  mode = "focus";
+  remainingTime = focusDuration;
+  animateOrb(remainingTime);
+  timer = setInterval(runTimer, 1000);
+}
 
-    function startBreak() {
-      clearInterval(timer);
-      mode = "break";
-      remainingTime = breakDuration;
-      orb.style.background = "rgba(90,100,110,0.8)";
-      orb.style.boxShadow = "0 0 40px rgba(90,100,110,0.2)";
-      animateOrb(5 * 60);
-      timer = setInterval(runTimer, 1000);
-    }
+function startBreak() {
+  clearInterval(timer);
+  mode = "break";
+  remainingTime = breakDuration;
+  animateOrb(remainingTime);
+  timer = setInterval(runTimer, 1000);
+}
 
-    function runTimer() {
-      if (remainingTime > 0) {
-        remainingTime--;
-        updateDisplay();
-      } else {
-        clearInterval(timer);
-        if (mode === "focus") {
-          startBreak();
-        } else {
-          startFocus();
-        }
-      }
-    }
+function resetTimer() {
+  clearInterval(timer);
+  remainingTime = focusDuration;
+  mode = "focus";
+  orb.style.width = "80px";
+  orb.style.height = "80px";
+  orb.style.boxShadow = "0 0 30px #fff9c4";
+  updateDisplay();
+}
 
-    function resetTimer() {
-      clearInterval(timer);
-      remainingTime = focusDuration;
-      mode = "focus";
-      orb.style.transform = "scale(1)";
-      updateDisplay();
-    }
-
-    function animateOrb(duration) {
-      const start = Date.now();
-      const startScale = 1;
-      const endScale = 2.2;
-      function step() {
-        const elapsed = (Date.now() - start) / 1000;
-        const progress = Math.min(elapsed / duration, 1);
-        const scale = startScale + (endScale - startScale) * progress;
-        orb.style.transform = `scale(${scale})`;
-        if (progress < 1) requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-    }
-
+function runTimer() {
+  if (remainingTime > 0) {
+    remainingTime--;
     updateDisplay();
-  </script>
+    updateOrbSize();
+  } else {
+    clearInterval(timer);
+    if (mode === "focus") startBreak();
+    else startFocus();
+  }
+}
+
+function animateOrb(totalTime) {
+  orb.style.animation = "glow 6s ease-in-out infinite";
+  orb.style.width = "80px";
+  orb.style.height = "80px";
+}
+
+function updateOrbSize() {
+  let totalTime = mode === "focus" ? focusDuration : breakDuration;
+  let progress = 1 - remainingTime / totalTime;
+  let minSize = 80;
+  let maxSize = 160; // max orb diameter
+  let size = minSize + (maxSize - minSize) * progress;
+  orb.style.width = size + "px";
+  orb.style.height = size + "px";
+
+  // Update glow proportional to size
+  let glow = size / 2;
+  orb.style.boxShadow = `0 0 ${glow}px #fff9c4`;
+}
+
+// Initialize display
+updateDisplay();
+</script>
 </body>
 </html>
