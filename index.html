@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soft Glow Orb Pomodoro</title>
+  <style>
+    body {
+      background: #EBECED;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Inter", "Noto Sans", sans-serif;
+      color: #333;
+    }
+
+    .container {
+      text-align: center;
+      position: relative;
+    }
+
+    .orb {
+      width: 150px;
+      height: 150px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 50%;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+      animation: breathe 6s ease-in-out infinite;
+      transition: background 1.5s ease, transform 1.5s ease;
+    }
+
+    .text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.1rem;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    button {
+      background: rgba(0, 0, 0, 0.8);
+      border: none;
+      border-radius: 50px;
+      color: #fff;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(0,0,0,0.15); }
+      50% { transform: scale(1.05); box-shadow: 0 0 60px rgba(0,0,0,0.25); }
+    }
+
+    @keyframes expand {
+      from { transform: scale(1); }
+      to { transform: scale(2.2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="orb" id="orb"></div>
+    <div class="text" id="text">Focus • 25:00</div>
+    <div class="controls">
+      <button onclick="startFocus()">Focus</button>
+      <button onclick="startBreak()">Break</button>
+      <button onclick="resetTimer()">Reset</button>
+    </div>
+  </div>
+
+  <script>
+    let focusDuration = 25 * 60; // 25 min
+    let breakDuration = 5 * 60;  // 5 min
+    let timer;
+    let remainingTime = focusDuration;
+    let mode = "focus";
+    const orb = document.getElementById("orb");
+    const text = document.getElementById("text");
+
+    function updateDisplay() {
+      const mins = Math.floor(remainingTime / 60);
+      const secs = remainingTime % 60;
+      text.textContent = `${mode === "focus" ? "Focus" : "Break"} • ${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    function startFocus() {
+      clearInterval(timer);
+      mode = "focus";
+      remainingTime = focusDuration;
+      orb.style.background = "rgba(0,0,0,0.8)";
+      orb.style.boxShadow = "0 0 40px rgba(0,0,0,0.2)";
+      animateOrb(25 * 60);
+      timer = setInterval(runTimer, 1000);
+    }
+
+    function startBreak() {
+      clearInterval(timer);
+      mode = "break";
+      remainingTime = breakDuration;
+      orb.style.background = "rgba(90,100,110,0.8)";
+      orb.style.boxShadow = "0 0 40px rgba(90,100,110,0.2)";
+      animateOrb(5 * 60);
+      timer = setInterval(runTimer, 1000);
+    }
+
+    function runTimer() {
+      if (remainingTime > 0) {
+        remainingTime--;
+        updateDisplay();
+      } else {
+        clearInterval(timer);
+        if (mode === "focus") {
+          startBreak();
+        } else {
+          startFocus();
+        }
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      remainingTime = focusDuration;
+      mode = "focus";
+      orb.style.transform = "scale(1)";
+      updateDisplay();
+    }
+
+    function animateOrb(duration) {
+      const start = Date.now();
+      const startScale = 1;
+      const endScale = 2.2;
+      function step() {
+        const elapsed = (Date.now() - start) / 1000;
+        const progress = Math.min(elapsed / duration, 1);
+        const scale = startScale + (endScale - startScale) * progress;
+        orb.style.transform = `scale(${scale})`;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    updateDisplay();
+  </script>
+</body>
+</html>
