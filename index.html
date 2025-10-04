@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Soft Glow Orb Pomodoro</title>
+<title>Breathing Soft Glow Orb Pomodoro</title>
 <style>
   body {
     background: #EBECED;
@@ -20,14 +20,44 @@
     position: relative;
   }
 
+  .orb-container {
+    position: relative;
+    display: inline-block;
+  }
+
   .orb {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: radial-gradient(circle, #fff9c4 40%, #c8e6c9 100%);
+    background: radial-gradient(circle at center, #fff9c4 40%, #c8e6c9 100%);
     box-shadow: 0 0 30px #fff9c4;
-    transition: width 0.3s ease, height 0.3s ease, box-shadow 0.3s ease;
     margin: 0 auto;
+    transition: width 0.2s linear, height 0.2s linear, box-shadow 0.2s linear, background 0.5s linear;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .orb-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(255, 249, 196,0.3) 0%, rgba(255,249,196,0) 70%);
+    opacity: 0.6;
+    filter: blur(30px);
+  }
+
+  .sparkle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    pointer-events: none;
   }
 
   .time-label {
@@ -56,17 +86,15 @@
   button:hover {
     background: #444;
   }
-
-  @keyframes glow {
-    0% { box-shadow: 0 0 10px #fff9c4; }
-    50% { box-shadow: 0 0 50px #fff9c4; }
-    100% { box-shadow: 0 0 10px #fff9c4; }
-  }
 </style>
 </head>
 <body>
   <div class="container">
-    <div class="orb" id="orb"></div>
+    <div class="orb-container">
+      <div class="orb" id="orb">
+        <div class="orb-glow" id="orbGlow"></div>
+      </div>
+    </div>
     <div class="time-label" id="timeLabel">Focus • 25:00</div>
     <div class="controls">
       <button onclick="startFocus()">Focus</button>
@@ -75,81 +103,151 @@
     </div>
   </div>
 
-<script>
-let focusDuration = 25 * 60; // 25 min
-let breakDuration = 5 * 60;  // 5 min
-let timer;
-let remainingTime = focusDuration;
-let mode = "focus";
-const orb = document.getElementById("orb");
-const timeLabel = document.getElementById("timeLabel");
+  <audio id="endSound">
+    <source src="https://freesound.org/data/previews/341/341695_3248244-lq.mp3" type="audio/mpeg">
+  </audio>
 
-function updateDisplay() {
-  const mins = Math.floor(remainingTime / 60);
-  const secs = remainingTime % 60;
-  timeLabel.textContent = `${mode === "focus" ? "Focus" : "Break"} • ${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
+<script>
+const focusDuration = 25 * 60;
+const breakDuration = 5 * 60;
+let mode = "focus";
+let startTime;
+let totalTime;
+let animationFrame;
+const orb = document.getElementById("orb");
+const orbGlow = document.getElementById("orbGlow");
+const timeLabel = document.getElementById("timeLabel");
+const endSound = document.getElementById("endSound");
+
+const sparkles = [];
+const NUM_SPARKLES = 15;
+
+// Create sparkles
+for (let i = 0; i < NUM_SPARKLES; i++) {
+  const s = document.createElement("div");
+  s.className = "sparkle";
+  orb.appendChild(s);
+  sparkles.push({
+    el: s,
+    x: Math.random(),
+    y: Math.random(),
+    dx: (Math.random()-0.5)*0.002,
+    dy: (Math.random()-0.5)*0.002
+  });
 }
 
+// Colors
+const focusColors = {start: [255, 249, 196], end: [200, 230, 201]};
+const breakColors = {start: [200, 230, 201], end: [170, 200, 210]};
+
 function startFocus() {
-  clearInterval(timer);
+  cancelAnimationFrame(animationFrame);
   mode = "focus";
-  remainingTime = focusDuration;
-  animateOrb(remainingTime);
-  timer = setInterval(runTimer, 1000);
+  totalTime = focusDuration;
+  startTime = Date.now();
+  animate();
 }
 
 function startBreak() {
-  clearInterval(timer);
+  cancelAnimationFrame(animationFrame);
   mode = "break";
-  remainingTime = breakDuration;
-  animateOrb(remainingTime);
-  timer = setInterval(runTimer, 1000);
+  totalTime = breakDuration;
+  startTime = Date.now();
+  animate();
 }
 
 function resetTimer() {
-  clearInterval(timer);
-  remainingTime = focusDuration;
+  cancelAnimationFrame(animationFrame);
+  totalTime = focusDuration;
+  startTime = Date.now();
   mode = "focus";
-  orb.style.width = "80px";
-  orb.style.height = "80px";
-  orb.style.boxShadow = "0 0 30px #fff9c4";
-  updateDisplay();
+  updateDisplay(totalTime);
+  updateOrb(0,1);
+  updateGlow(0,1);
 }
 
-function runTimer() {
-  if (remainingTime > 0) {
-    remainingTime--;
-    updateDisplay();
-    updateOrbSize();
+function animate() {
+  const elapsed = (Date.now() - startTime) / 1000;
+  const remaining = Math.max(totalTime - elapsed, 0);
+  updateDisplay(remaining);
+
+  let progress = elapsed / totalTime;
+  if (progress > 1) progress = 1;
+
+  const pulse = 1 + 0.05 * Math.sin(Date.now() / 400); // breathing pulse
+  const glowPulse = 1 + 0.1 * Math.sin(Date.now() / 600); // soft outer glow pulse
+
+  updateOrb(progress, pulse);
+  updateGlow(progress, glowPulse);
+  updateSparkles(progress);
+
+  if (remaining > 0) {
+    animationFrame = requestAnimationFrame(animate);
   } else {
-    clearInterval(timer);
+    playSound();
     if (mode === "focus") startBreak();
     else startFocus();
   }
 }
 
-function animateOrb(totalTime) {
-  orb.style.animation = "glow 6s ease-in-out infinite";
-  orb.style.width = "80px";
-  orb.style.height = "80px";
+function updateDisplay(remaining) {
+  const mins = Math.floor(remaining / 60);
+  const secs = Math.floor(remaining % 60);
+  timeLabel.textContent = `${mode==="focus"?"Focus":"Break"} • ${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
 }
 
-function updateOrbSize() {
-  let totalTime = mode === "focus" ? focusDuration : breakDuration;
-  let progress = 1 - remainingTime / totalTime;
-  let minSize = 80;
-  let maxSize = 160; // max orb diameter
-  let size = minSize + (maxSize - minSize) * progress;
+function updateOrb(progress, pulse=1) {
+  const minSize = 80;
+  const maxSize = 160;
+  const size = (minSize + (maxSize - minSize) * progress) * pulse;
   orb.style.width = size + "px";
   orb.style.height = size + "px";
 
-  // Update glow proportional to size
-  let glow = size / 2;
-  orb.style.boxShadow = `0 0 ${glow}px #fff9c4`;
+  const glow = 10 + 50 * progress;
+  const colors = mode==="focus"?focusColors:breakColors;
+  const r = Math.round(colors.start[0]+(colors.end[0]-colors.start[0])*progress);
+  const g = Math.round(colors.start[1]+(colors.end[1]-colors.start[1])*progress);
+  const b = Math.round(colors.start[2]+(colors.end[2]-colors.start[2])*progress);
+  orb.style.background = `radial-gradient(circle at center, rgb(${r},${g},${b}) 40%, rgba(${r},${g},${b},0.2) 100%)`;
+  orb.style.boxShadow = `0 0 ${glow*pulse}px rgba(${r},${g},${b},0.6)`;
 }
 
-// Initialize display
-updateDisplay();
+function updateGlow(progress, pulse=1) {
+  const colors = mode==="focus"?focusColors:breakColors;
+  const r = Math.round(colors.start[0]+(colors.end[0]-colors.start[0])*progress);
+  const g = Math.round(colors.start[1]+(colors.end[1]-colors.start[1])*progress);
+  const b = Math.round(colors.start[2]+(colors.end[2]-colors.start[2])*progress);
+
+  orbGlow.style.width = 160 * pulse + "px";
+  orbGlow.style.height = 160 * pulse + "px";
+  orbGlow.style.background = `radial-gradient(circle, rgba(${r},${g},${b},0.3) 0%, rgba(${r},${g},${b},0) 70%)`;
+  orbGlow.style.filter = `blur(${30 * pulse}px)`;
+}
+
+function updateSparkles(progress) {
+  sparkles.forEach(s => {
+    s.x += s.dx;
+    s.y += s.dy;
+
+    if (s.x<0) s.x=0.02; 
+    if (s.x>1) s.x=0.98;
+    if (s.y<0) s.y=0.02; 
+    if (s.y>1) s.y=0.98;
+
+    s.el.style.left = `${s.x*100}%`;
+    s.el.style.top = `${s.y*100}%`;
+  });
+}
+
+function playSound() {
+  endSound.currentTime=0;
+  endSound.play();
+}
+
+// Initialize
+updateDisplay(totalTime || focusDuration);
+updateOrb(0,1);
+updateGlow(0,1);
 </script>
 </body>
 </html>
